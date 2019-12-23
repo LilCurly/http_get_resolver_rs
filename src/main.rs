@@ -5,7 +5,6 @@ use tokio::io::write_all;
 use tokio::io::read_to_end;
 use tokio::net::TcpStream;
 use std::net::ToSocketAddrs;
-use std::str::from_utf8;
 use tokio::fs::File;
 
 fn download(host: String, path: String, file_name: String) -> impl Future<Item = (), Error = ()> {
@@ -15,7 +14,6 @@ fn download(host: String, path: String, file_name: String) -> impl Future<Item =
             Some(addr) => addr
     };
 
-    // REQUEST FORMAT: api.themoviedb.org:80 /3/search/movie?api_key=c1ac741d5dd740f9861e794c5363b0c2\&query=alien
     let req_body = format!("GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n", path, host);
 
     TcpStream::connect(&addr)
@@ -23,19 +21,19 @@ fn download(host: String, path: String, file_name: String) -> impl Future<Item =
             println!("Got a stream: {:?}", stream);
             write_all(stream, req_body)
         })
-        .and_then(|(stream, query)| {
+        .and_then(|(stream, _)| {
             println!("Got a response: {:?}", stream);
             let vec = vec![];
             read_to_end(stream, vec)
         })
-        .and_then(|(stream, resp)| {
+        .and_then(|(_, resp)| {
             File::create(file_name).map(move |mut file| {
                 println!("Writing into file: {:?}", file);
                 file.write_all(&resp).unwrap();
             })
         })
         .map_err(|err| {
-            eprintln!("Error");
+            eprintln!("Error: {:?}", err);
         })
 }
 
